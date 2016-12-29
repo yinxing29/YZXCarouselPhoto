@@ -69,6 +69,7 @@
     return self;
 }
 
+//布局
 - (void)initializeUserInterface
 {
     [self addSubview:self.scrollView];
@@ -81,6 +82,7 @@
     [self addSubview:self.pageControl];
 }
 
+//赋值
 - (void)toViewTheAssignment
 {
     //如果同时传入了两种数组则结束布局
@@ -112,6 +114,7 @@
     self.pageControl.currentPage = self.centerPage;
 }
 
+//显示图片
 - (void)addTheImageData
 {
     if (self.imageUrl) {
