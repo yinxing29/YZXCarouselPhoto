@@ -25,7 +25,8 @@
     self.garouselPhotoView.imageName = @[@"c_img_1.png",@"c_img_2.png",@"c_img_3.png",@"c_img_4.png",@"c_img_5.png",@"c_img_6.png"];
     self.garouselPhotoView.currentPageIndicatorTintColor = [UIColor yellowColor];
     self.garouselPhotoView.pageIndicatorTintColor = [UIColor purpleColor];
-    self.garouselPhotoView.imageContentMode = UIViewContentModeScaleAspectFit;
+    self.garouselPhotoView.imageContentMode = UIViewContentModeCenter;
+    self.garouselPhotoView.shufflingFlag = YES;
     [self.view addSubview:self.garouselPhotoView];
 }
 

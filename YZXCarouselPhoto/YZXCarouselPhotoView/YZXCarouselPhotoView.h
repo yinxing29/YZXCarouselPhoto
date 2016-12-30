@@ -37,4 +37,8 @@
  */
 @property (nonatomic, assign) UIViewContentMode          imageContentMode;
 
+@property (nonatomic, assign) BOOL                       shufflingFlag;
+
+
+
 @end

@@ -56,6 +56,8 @@
 
 @property (nonatomic, strong) UIPageControl                *pageControl;
 
+@property (nonatomic, strong) NSTimer                      *timer;
+
 @end
 
 @implementation YZXCarouselPhotoView
@@ -72,8 +74,9 @@
 //布局
 - (void)initializeUserInterface
 {
-    [self addSubview:self.scrollView];
+    self.timer.fireDate = [NSDate distantFuture];
     
+    [self addSubview:self.scrollView];
     
     [self.scrollView addSubview:self.leftImageView];
     [self.scrollView addSubview:self.centerImageView];
@@ -126,6 +129,23 @@
         self.centerImageView.image = [UIImage imageNamed:self.imageName[self.centerPage]];
         self.rightImageView.image = [UIImage imageNamed:self.imageName[self.rightPage]];
     }
+    
+    self.pageControl.currentPage = self.centerPage;
+}
+
+//自动轮播
+- (void)timerEvent
+{
+    self.leftPage = self.leftPage + 1 > self.photoNumber - 1?0:self.leftPage + 1;
+    self.centerPage = self.centerPage + 1 > self.photoNumber - 1?0:self.centerPage + 1;
+    self.rightPage = self.rightPage + 1 > self.photoNumber - 1?0:self.rightPage + 1;
+    [self addTheImageData];
+}
+
+//pageControl点击事件
+- (void)pageControlPressed:(UIPageControl *)sender
+{
+    NSLog(@"%ld",sender.currentPage);
 }
 
 #pragma mark - <UIScrollViewDelegate>
@@ -148,8 +168,6 @@
     }
     //重新设置scrollview的contentOffset
     scrollView.contentOffset = CGPointMake(self_width, 0);
-    
-    self.pageControl.currentPage = self.centerPage;
 }
 
 #pragma mark - 初始化
@@ -202,6 +220,14 @@
     return _rightImageView;
 }
 
+- (NSTimer *)timer
+{
+    if (!_timer) {
+        _timer = [NSTimer scheduledTimerWithTimeInterval:2.0 target:self selector:@selector(timerEvent) userInfo:nil repeats:YES];
+    }
+    return _timer;
+}
+
 #pragma mark - setter
 - (void)setImageUrl:(NSArray *)imageUrl
 {
@@ -244,5 +270,19 @@
     self.centerImageView.contentMode = _imageContentMode;
     self.rightImageView.contentMode = _imageContentMode;
 }
+
+- (void)setShufflingFlag:(BOOL)shufflingFlag
+{
+    if (_shufflingFlag != shufflingFlag) {
+        _shufflingFlag = shufflingFlag;
+    }
+    if (_shufflingFlag) {
+        __weak typeof(self) weak_self = self;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            weak_self.timer.fireDate = [NSDate distantPast];
+        });
+    }
+}
+
 
 @end
