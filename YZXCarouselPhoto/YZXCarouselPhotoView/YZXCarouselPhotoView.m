@@ -120,6 +120,16 @@
 //显示图片
 - (void)addTheImageData
 {
+    CATransition *transition = [CATransition animation];
+    transition.duration = 0.25f;
+    transition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
+    transition.type = kCATransitionPush;
+    transition.subtype = kCATransitionFromRight;
+    
+    [self.leftImageView.layer addAnimation:transition forKey:nil];
+    [self.centerImageView.layer addAnimation:transition forKey:nil];
+    [self.rightImageView.layer addAnimation:transition forKey:nil];
+    
     if (self.imageUrl) {
         [self.leftImageView sd_setImageWithURL:[NSURL URLWithString:self.imageUrl[self.leftPage]] placeholderImage:[UIImage imageNamed:@""]];
         [self.centerImageView sd_setImageWithURL:[NSURL URLWithString:self.imageUrl[self.centerPage]] placeholderImage:[UIImage imageNamed:@""]];
