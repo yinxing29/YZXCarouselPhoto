@@ -7,10 +7,7 @@
 //
 
 #import "YZXCarouselPhotoView.h"
-#import "UIImageView+WebCache.h"
-#import "UIImage+GIF.h"
-#import "UIImage+WebP.h"
-#import "UIImage+MultiFormat.h"
+#import <SDWebImage/UIImageView+WebCache.h>
 
 #define self_width self.bounds.size.width
 #define self_height self.bounds.size.height
@@ -66,16 +63,15 @@
 {
     self = [super initWithFrame:frame];
     if (self) {
-        [self initializeUserInterface];
+        self.shufflingFlag = YES;
+        [self p_initView];
     }
     return self;
 }
 
 //布局
-- (void)initializeUserInterface
+- (void)p_initView
 {
-    self.timer.fireDate = [NSDate distantFuture];
-    
     [self addSubview:self.scrollView];
     
     [self.scrollView addSubview:self.leftImageView];
@@ -86,7 +82,7 @@
 }
 
 //赋值
-- (void)toViewTheAssignment
+- (void)p_initData
 {
     //如果同时传入了两种数组则结束布局
     if (self.imageUrl && self.imageName) {
@@ -99,57 +95,47 @@
     }
     //获取轮播图总数量
     self.photoNumber = self.imageUrl?self.imageUrl.count:self.imageName.count;
-    //中间图片起始下标
-    self.centerPage = 0;
-    //右边图片起始下标
-    self.rightPage = 1>self.photoNumber - 1?0:1;
-    //左边图片起始下标
-    self.leftPage = self.imageUrl?self.photoNumber - 1:self.photoNumber - 1;
     
     if (self.photoNumber == 0) {
         return;
     }
     
+    //中间图片起始下标
+    self.centerPage = 0;
+    //右边图片起始下标
+    self.rightPage = (self.photoNumber - 1 < 1)?0:1;
+    //左边图片起始下标
+    self.leftPage = self.photoNumber - 1;
+    
     //设置imageView.image
-    [self addTheImageData];
+    [self p_showImage];
     
     self.pageControl.numberOfPages = self.photoNumber;
     self.pageControl.currentPage = self.centerPage;
+    
+    if (self.shufflingFlag) {
+        [self p_createTimer];
+    }
 }
 
 //显示图片
-- (void)addTheImageData
+- (void)p_showImage
 {
-    CATransition *transition = [CATransition animation];
-    transition.duration = 0.25f;
-    transition.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
-    transition.type = kCATransitionPush;
-    transition.subtype = kCATransitionFromRight;
-    
-    [self.leftImageView.layer addAnimation:transition forKey:nil];
-    [self.centerImageView.layer addAnimation:transition forKey:nil];
-    [self.rightImageView.layer addAnimation:transition forKey:nil];
-    
     if (self.imageUrl) {
-        [self.leftImageView sd_setImageWithURL:[NSURL URLWithString:self.imageUrl[self.leftPage]] placeholderImage:[UIImage imageNamed:@""]];
-        [self.centerImageView sd_setImageWithURL:[NSURL URLWithString:self.imageUrl[self.centerPage]] placeholderImage:[UIImage imageNamed:@""]];
-        [self.centerImageView sd_setImageWithURL:[NSURL URLWithString:self.imageUrl[self.rightPage]] placeholderImage:[UIImage imageNamed:@""]];
+        [self.leftImageView sd_setImageWithURL:[NSURL URLWithString:self.imageUrl[self.leftPage]]];
+        [self.centerImageView sd_setImageWithURL:[NSURL URLWithString:self.imageUrl[self.centerPage]]];
+        [self.rightImageView sd_setImageWithURL:[NSURL URLWithString:self.imageUrl[self.rightPage]]];
     }else if (self.imageName) {
         self.leftImageView.image = [UIImage imageNamed:self.imageName[self.leftPage]];
         self.centerImageView.image = [UIImage imageNamed:self.imageName[self.centerPage]];
         self.rightImageView.image = [UIImage imageNamed:self.imageName[self.rightPage]];
     }
-    
-    self.pageControl.currentPage = self.centerPage;
 }
 
 //自动轮播
 - (void)timerEvent
 {
-    self.leftPage = self.leftPage + 1 > self.photoNumber - 1?0:self.leftPage + 1;
-    self.centerPage = self.centerPage + 1 > self.photoNumber - 1?0:self.centerPage + 1;
-    self.rightPage = self.rightPage + 1 > self.photoNumber - 1?0:self.rightPage + 1;
-    [self addTheImageData];
+    [self.scrollView setContentOffset:CGPointMake(self_width * 2, 0) animated:YES];
 }
 
 //pageControl点击事件
@@ -159,25 +145,66 @@
 }
 
 #pragma mark - <UIScrollViewDelegate>
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+    self.pageControl.currentPage = self.centerPage;
+}
+
+- (void)scrollViewDidEndScrollingAnimation:(UIScrollView *)scrollView
+{
+    self.leftPage = self.leftPage + 1 > self.photoNumber - 1?0:self.leftPage + 1;
+    self.centerPage = self.centerPage + 1 > self.photoNumber - 1?0:self.centerPage + 1;
+    self.rightPage = self.rightPage + 1 > self.photoNumber - 1?0:self.rightPage + 1;
+    
+    [self p_showImage];
+    self.scrollView.contentOffset = CGPointMake(self_width, 0);
+}
+
+- (void)scrollViewWillBeginDecelerating:(UIScrollView *)scrollView
+{
+    [self p_removeTimer];
+    //防止过快滑动c造成数据更新不过来，在滑动结束时打开交互
+    self.userInteractionEnabled = NO;
+}
+
 - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
 {
     if (self.photoNumber == 0) {
         return;
     }
+    
+    if (self.shufflingFlag) {
+        [self p_createTimer];
+    }
+    
     //右滑(当各下标 + 1大于总数量时，设置为0)
-    if (scrollView.contentOffset.x > self_width) {
+    if (self.scrollView.contentOffset.x > self_width) {
         self.leftPage = self.leftPage + 1 > self.photoNumber - 1?0:self.leftPage + 1;
         self.centerPage = self.centerPage + 1 > self.photoNumber - 1?0:self.centerPage + 1;
         self.rightPage = self.rightPage + 1 > self.photoNumber - 1?0:self.rightPage + 1;
-        [self addTheImageData];
-    }else if (scrollView.contentOffset.x < self_width) {//左滑(当各下标 - 1小于0时，设置为总数 - 1)
+    }else if (self.scrollView.contentOffset.x < self_width) {//左滑(当各下标 - 1小于0时，设置为总数 - 1)
         self.leftPage = self.leftPage - 1 < 0?self.photoNumber - 1:self.leftPage - 1;
         self.centerPage = self.centerPage - 1 < 0?self.photoNumber - 1:self.centerPage - 1;
         self.rightPage = self.rightPage - 1 < 0?self.photoNumber - 1:self.rightPage - 1;
-        [self addTheImageData];
+        [self.scrollView setContentOffset:CGPointMake(0, 0) animated:YES];
     }
-    //重新设置scrollview的contentOffset
-    scrollView.contentOffset = CGPointMake(self_width, 0);
+    [self p_showImage];
+    self.scrollView.contentOffset = CGPointMake(self_width, 0);
+    
+    self.userInteractionEnabled = YES;
+}
+
+- (void)p_createTimer
+{
+    [self p_removeTimer];
+    self.timer = [NSTimer scheduledTimerWithTimeInterval:2.0 target:self selector:@selector(timerEvent) userInfo:nil repeats:YES];
+    [[NSRunLoop currentRunLoop] addTimer:self.timer forMode:NSDefaultRunLoopMode];
+}
+
+- (void)p_removeTimer
+{
+    [self.timer invalidate];
+    self.timer = nil;
 }
 
 #pragma mark - 初始化
@@ -230,52 +257,34 @@
     return _rightImageView;
 }
 
-- (NSTimer *)timer
-{
-    if (!_timer) {
-        _timer = [NSTimer scheduledTimerWithTimeInterval:2.0 target:self selector:@selector(timerEvent) userInfo:nil repeats:YES];
-    }
-    return _timer;
-}
-
 #pragma mark - setter
 - (void)setImageUrl:(NSArray *)imageUrl
 {
-    if (_imageUrl != imageUrl) {
-        _imageUrl = imageUrl;
-    }
-    [self toViewTheAssignment];
+    _imageUrl = imageUrl;
+    [self p_initData];
 }
 
 - (void)setImageName:(NSArray *)imageName
 {
-    if (_imageName != imageName) {
-        _imageName = imageName;
-    }
-    [self toViewTheAssignment];
+    _imageName = imageName;
+    [self p_initData];
 }
 
 - (void)setCurrentPageIndicatorTintColor:(UIColor *)currentPageIndicatorTintColor
 {
-    if (_currentPageIndicatorTintColor != currentPageIndicatorTintColor) {
-        _currentPageIndicatorTintColor = currentPageIndicatorTintColor;
-    }
+    _currentPageIndicatorTintColor = currentPageIndicatorTintColor;
     self.pageControl.currentPageIndicatorTintColor = _currentPageIndicatorTintColor;
 }
 
 - (void)setPageIndicatorTintColor:(UIColor *)pageIndicatorTintColor
 {
-    if (_pageIndicatorTintColor != pageIndicatorTintColor) {
-        _pageIndicatorTintColor = pageIndicatorTintColor;
-    }
+    _pageIndicatorTintColor = pageIndicatorTintColor;
     self.pageControl.pageIndicatorTintColor = _pageIndicatorTintColor;
 }
 
 - (void)setImageContentMode:(UIViewContentMode)imageContentMode
 {
-    if (_imageContentMode != imageContentMode) {
-        _imageContentMode = imageContentMode;
-    }
+    _imageContentMode = imageContentMode;
     self.leftImageView.contentMode = _imageContentMode;
     self.centerImageView.contentMode = _imageContentMode;
     self.rightImageView.contentMode = _imageContentMode;
@@ -283,14 +292,9 @@
 
 - (void)setShufflingFlag:(BOOL)shufflingFlag
 {
-    if (_shufflingFlag != shufflingFlag) {
-        _shufflingFlag = shufflingFlag;
-    }
-    if (_shufflingFlag) {
-        __weak typeof(self) weak_self = self;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            weak_self.timer.fireDate = [NSDate distantPast];
-        });
+    _shufflingFlag = shufflingFlag;
+    if (!_shufflingFlag) {
+        [self p_removeTimer];
     }
 }
 

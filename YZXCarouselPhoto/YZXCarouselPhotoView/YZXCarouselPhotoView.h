@@ -37,6 +37,9 @@
  */
 @property (nonatomic, assign) UIViewContentMode          imageContentMode;
 
+/**
+ 是否启动轮播，默认为YES
+ */
 @property (nonatomic, assign) BOOL                       shufflingFlag;
 
 
