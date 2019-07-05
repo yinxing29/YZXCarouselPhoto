@@ -163,7 +163,7 @@
 - (void)scrollViewWillBeginDecelerating:(UIScrollView *)scrollView
 {
     [self p_removeTimer];
-    //防止过快滑动c造成数据更新不过来，在滑动结束时打开交互
+    //防止过快滑动造成数据更新不过来，在滑动结束时打开交互
     self.userInteractionEnabled = NO;
 }
 
